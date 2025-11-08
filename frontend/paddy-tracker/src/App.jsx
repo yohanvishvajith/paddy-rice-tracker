@@ -1,35 +1,163 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
+import RoleSelection from "./components/RoleSelection";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import UserDashboard from "./components/user/UserDashboard";
+import Notification from "./components/Notification";
+import { mockUsers, initialTransactions } from "./data/mockData";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+function AppContent() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [transactions, setTransactions] = useState(initialTransactions);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const navigate = useNavigate();
+
+  const showNotif = (message) => {
+    setNotificationMessage(message);
+    setShowNotification(true);
+    setTimeout(() => setShowNotification(false), 3000);
+  };
+
+  const handleRoleSelect = (roleKey) => {
+    const user = mockUsers[roleKey];
+    setCurrentUser(user);
+    showNotif(`Welcome, ${user.name}!`);
+
+    // Navigate to appropriate dashboard
+    if (user.role === "admin") {
+      navigate("/admin");
+    } else if (user.role === "miller") {
+      navigate("/miller");
+    } else if (user.role === "broker") {
+      navigate("/broker");
+    } else if (user.role === "wholesaler") {
+      navigate("/wholesaler");
+    } else if (user.role === "retailer") {
+      navigate("/retailer");
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    showNotif("Logged out successfully");
+    navigate("/");
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="min-h-screen bg-gray-50">
+      <Notification message={notificationMessage} show={showNotification} />
+
+      <Routes>
+        <Route
+          path="/"
+          element={<RoleSelection onSelectRole={handleRoleSelect} />}
+        />
+
+        <Route
+          path="/admin"
+          element={
+            currentUser?.role === "admin" ? (
+              <AdminDashboard
+                currentUser={currentUser}
+                transactions={transactions}
+                onLogout={handleLogout}
+                showNotif={showNotif}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        <Route
+          path="/miller"
+          element={
+            currentUser?.role === "miller" ? (
+              <UserDashboard
+                currentUser={currentUser}
+                transactions={transactions}
+                setTransactions={setTransactions}
+                onLogout={handleLogout}
+                showNotif={showNotif}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        <Route
+          path="/broker"
+          element={
+            currentUser?.role === "broker" ? (
+              <UserDashboard
+                currentUser={currentUser}
+                transactions={transactions}
+                setTransactions={setTransactions}
+                onLogout={handleLogout}
+                showNotif={showNotif}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        <Route
+          path="/wholesaler"
+          element={
+            currentUser?.role === "wholesaler" ? (
+              <UserDashboard
+                currentUser={currentUser}
+                transactions={transactions}
+                setTransactions={setTransactions}
+                onLogout={handleLogout}
+                showNotif={showNotif}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        <Route
+          path="/retailer"
+          element={
+            currentUser?.role === "retailer" ? (
+              <UserDashboard
+                currentUser={currentUser}
+                transactions={transactions}
+                setTransactions={setTransactions}
+                onLogout={handleLogout}
+                showNotif={showNotif}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        {/* Redirect any unknown routes to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  );
 }
 
-export default App
+function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+}
+
+export default App;
