@@ -29,7 +29,7 @@
             <label for="purchaseFromType">Purchase From</label>
             <select id="purchaseFromType" required>
               <option value="Farmer">Farmer</option>
-              <option value="Miller">Miller</option>
+              <option value="Collecter">Collecter</option>
             </select>
 
             <label for="sourceSelect">Source</label>
@@ -97,9 +97,9 @@
       // It fetches users from /api/users and populates the Source select
       // depending on the selected Purchase From type (Farmer or Miller).
 
-  let users = [];
-  let purchases = [];
-  let currentUser = null;
+      let users = [];
+      let purchases = [];
+      let currentUser = null;
 
       function qs(sel) {
         return document.querySelector(sel);
@@ -117,6 +117,19 @@
         }
       }
 
+      // Fetch available paddy types from server
+      async function fetchPaddyTypes() {
+        try {
+          const res = await fetch("/api/paddy_types");
+          if (!res.ok) throw new Error("Failed to load paddy types");
+          const data = await res.json();
+          return Array.isArray(data) ? data : [];
+        } catch (e) {
+          console.error("Could not fetch paddy types:", e);
+          return [];
+        }
+      }
+
       async function fetchCurrentUser() {
         try {
           const res = await fetch("/api/me");
@@ -131,14 +144,14 @@
 
       async function fetchServerTransactions(to) {
         try {
-          const q = encodeURIComponent(to || '');
-          const url = to ? `/api/transactions?to=${q}` : '/api/transactions';
+          const q = encodeURIComponent(to || "");
+          const url = to ? `/api/transactions?to=${q}` : "/api/transactions";
           const res = await fetch(url);
-          if (!res.ok) throw new Error('Failed to load transactions');
+          if (!res.ok) throw new Error("Failed to load transactions");
           const data = await res.json();
           return Array.isArray(data) ? data : [];
         } catch (e) {
-          console.error('Could not fetch transactions:', e);
+          console.error("Could not fetch transactions:", e);
           return [];
         }
       }
@@ -191,21 +204,23 @@
       async function loadServerTransactions() {
         if (!currentUser) return;
         try {
-          const res = await fetch(`/api/transactions?to=${encodeURIComponent(currentUser.user_id)}`);
-          if (!res.ok) throw new Error('Failed to load transactions');
+          const res = await fetch(
+            `/api/transactions?to=${encodeURIComponent(currentUser.user_id)}`
+          );
+          if (!res.ok) throw new Error("Failed to load transactions");
           const rows = await res.json();
-          purchases = rows.map(r => ({
-            id: 'srv-' + r.id,
+          purchases = rows.map((r) => ({
+            id: "srv-" + r.id,
             when: r.datetime || r.created_at,
-            fromType: '',
-            sourceId: r['from'],
-            sourceName: String(r['from']),
-            paddyType: r.type || '',
+            fromType: "",
+            sourceId: r["from"],
+            sourceName: String(r["from"]),
+            paddyType: r.type || "",
             qty: Number(r.quantity) || 0,
-            tx_id: r.id
+            tx_id: r.id,
           }));
         } catch (e) {
-          console.error('Could not fetch transactions', e);
+          console.error("Could not fetch transactions", e);
           purchases = [];
         }
       }
@@ -266,7 +281,21 @@
         }
         currentUser = me;
         await fetchUsers();
-        const fromSel = qs('#purchaseFromType');
+        // populate paddy types select from server
+        const types = await fetchPaddyTypes();
+        const pSel = qs("#paddyType");
+        pSel.innerHTML = "";
+        const ph = document.createElement("option");
+        ph.value = "";
+        ph.textContent = "Select paddy type";
+        pSel.appendChild(ph);
+        types.forEach((t) => {
+          const o = document.createElement("option");
+          o.value = t.name || t.id || "";
+          o.textContent = t.name || String(t.id || "");
+          pSel.appendChild(o);
+        });
+        const fromSel = qs("#purchaseFromType");
         populateSourceSelect(fromSel.value);
         // Load server transactions for this user
         await loadServerTransactions();
@@ -312,25 +341,30 @@
                 quantity: rec.qty,
                 datetime: rec.when,
               };
-              const resp = await fetch('/api/transactions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+              const resp = await fetch("/api/transactions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
               });
               const j = await resp.json().catch(() => ({}));
               if (!resp.ok) {
-                alert('Failed to save transaction: ' + (j.error || resp.statusText));
+                alert(
+                  "Failed to save transaction: " + (j.error || resp.statusText)
+                );
                 return;
               }
               rec.tx_id = j.id;
               // refresh from server to show authoritative data
               await loadServerTransactions();
               renderTables();
-              qs('#purchaseForm').reset();
+              qs("#purchaseForm").reset();
               populateSourceSelect(fromType);
+              // reset paddyType to placeholder
+              const pSel2 = qs("#paddyType");
+              if (pSel2) pSel2.selectedIndex = 0;
             } catch (err) {
-              console.error('Error saving transaction', err);
-              alert('Error saving transaction');
+              console.error("Error saving transaction", err);
+              alert("Error saving transaction");
             }
           })();
         });
