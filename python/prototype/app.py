@@ -533,6 +533,31 @@ def api_add_user():
     contact_number = payload.get('contactNumber')
     total_area = payload.get('totalAreaOfPaddyLand')
     id = (log_last_inserted_user(user_type))
+
+    # If creating a PMB account, enforce single-account rule and fixed id
+    try:
+        if isinstance(user_type, str) and user_type.strip().lower().startswith('pmb'):
+            conn_chk = get_connection(MYSQL_DATABASE)
+            cur_chk = conn_chk.cursor()
+            # check if any existing PMB user exists (by user_type or id)
+            cur_chk.execute("SELECT id FROM users WHERE LOWER(user_type) = %s OR LOWER(id) = %s LIMIT 1", ('pmb', 'pmb'))
+            existing = cur_chk.fetchone()
+            cur_chk.close()
+            conn_chk.close()
+            if existing:
+                return jsonify({'ok': False, 'error': 'PMB account already exists'}), 400
+            # set the id explicitly to 'PMB'
+            id = 'PMB'
+    except Exception:
+        # if check fails for some reason, continue and let insert raise if needed
+        try:
+            cur_chk.close()
+        except Exception:
+            pass
+        try:
+            conn_chk.close()
+        except Exception:
+            pass
    
     try:
         conn = get_connection(MYSQL_DATABASE)
@@ -569,7 +594,7 @@ def api_add_user():
 
         cursor.close()
 
-        # If the client provided initial stock (paddy types + quantities), insert them
+    # If the client provided initial stock (paddy types + quantities), insert them
         # Use the application id we attempted to insert (variable `id`) if present,
         # otherwise fall back to the numeric last_id returned by the connector.
         created_user_id = id or last_id
@@ -577,14 +602,14 @@ def api_add_user():
             stock_items = payload.get('stock') if isinstance(payload, dict) else None
         except Exception:
             stock_items = None
-        # Do not insert initial stock for Farmers
-        is_farmer = False
+        # Do not insert initial stock for Farmers or PMB
+        is_no_stock = False
         try:
-            is_farmer = isinstance(user_type, str) and user_type.strip().lower().startswith('farmer')
+            is_no_stock = isinstance(user_type, str) and (user_type.strip().lower().startswith('farmer') or user_type.strip().lower().startswith('pmb'))
         except Exception:
-            is_farmer = False
+            is_no_stock = False
 
-        if stock_items and created_user_id and not is_farmer:
+        if stock_items and created_user_id and not is_no_stock:
             try:
                 s_cur = conn.cursor()
                 for si in stock_items:
