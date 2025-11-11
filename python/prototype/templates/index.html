@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sri Lanka Rice Supply Chain Blockchain Traceability System</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+
+  <body>
+    <header class="site-header">
+      <h1 class="site-title">
+        Sri Lanka Rice Supply Chain<br />Blockchain Traceability System
+      </h1>
+
+      <nav class="tabs" aria-label="Primary">
+        <ul>
+          <li class="tab active">
+            <a
+              href="#"
+              id="tab-dashboard"
+              role="tab"
+              aria-controls="dashboard"
+              aria-selected="true"
+              >Dashboard</a
+            >
+          </li>
+          <li class="tab">
+            <a
+              href="#"
+              id="tab-manage-user"
+              role="tab"
+              aria-controls="manage-user"
+              aria-selected="false"
+              >Manage User</a
+            >
+          </li>
+          <li class="tab">
+            <a
+              href="#"
+              id="tab-analytics"
+              role="tab"
+              aria-controls="analytics"
+              aria-selected="false"
+              >Analytics</a
+            >
+          </li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <section
+        id="dashboard"
+        class="tab-panel"
+        aria-labelledby="tab-dashboard"
+        hidden
+      >
+        <h2>Dashboard</h2>
+        <p>Welcome to the dashboard. Select a tab to view content.</p>
+      </section>
+
+      <section
+        id="manage-user"
+        class="tab-panel"
+        aria-labelledby="tab-manage-user"
+        hidden
+      >
+        <h2>Manage User</h2>
+
+        <div class="table-wrap">
+          <table
+            id="user-table"
+            class="data-table"
+            aria-describedby="user-table-desc"
+          >
+            <caption id="user-table-desc">
+              List of users
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">User ID</th>
+                <th scope="col">Name</th>
+                <th scope="col">User Type</th>
+                <th scope="col">Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- rows will be added here -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="controls">
+          <button id="add-user-btn" class="btn">Add User</button>
+        </div>
+
+        <!-- Add User Modal -->
+        <div
+          id="user-modal"
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-hidden="true"
+          hidden
+        >
+          <div class="modal-content" role="document">
+            <header class="modal-header">
+              <h3>Add User</h3>
+            </header>
+            <form id="user-form">
+              <label>
+                User Type
+                <select name="userType">
+                  <option selected>Farmer</option>
+                  <option>Collecter</option>
+                  <option>Miller</option>
+                </select>
+              </label>
+              <div id="type-fields">
+                <!-- fields rendered by JS -->
+              </div>
+
+              <div class="modal-actions">
+                <button type="button" id="cancel-btn" class="btn">
+                  Cancel
+                </button>
+                <button type="submit" class="btn primary">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="analytics"
+        class="tab-panel"
+        aria-labelledby="tab-analytics"
+        hidden
+      >
+        <h2>Analytics</h2>
+        <p>Placeholder analytics content.</p>
+      </section>
+    </main>
+
+    <script>
+      // Tab switching + modal handling
+      document.addEventListener("DOMContentLoaded", function () {
+        const tabAnchors = document.querySelectorAll(".tabs .tab a");
+        const tabs = document.querySelectorAll(".tab");
+        const panels = document.querySelectorAll(".tab-panel");
+
+        function activateTab(index) {
+          tabs.forEach((t, i) => {
+            const a = t.querySelector("a");
+            const selected = i === index;
+            if (selected) {
+              t.classList.add("active");
+              panels[i].hidden = false;
+              a.setAttribute("aria-selected", "true");
+            } else {
+              t.classList.remove("active");
+              panels[i].hidden = true;
+              a.setAttribute("aria-selected", "false");
+            }
+          });
+        }
+
+        tabAnchors.forEach((a, i) => {
+          a.addEventListener("click", function (e) {
+            e.preventDefault();
+            activateTab(i);
+          });
+        });
+
+        // Modal behavior
+        const addBtn = document.getElementById("add-user-btn");
+        const modal = document.getElementById("user-modal");
+        const modalContent = modal && modal.querySelector(".modal-content");
+        const cancelBtn = document.getElementById("cancel-btn");
+        const form = document.getElementById("user-form");
+        const tbody = document.querySelector("#user-table tbody");
+        let lastFocused = null;
+
+        // load users from server and populate table
+        async function loadUsers() {
+          try {
+            const res = await fetch("/api/users");
+            const rows = await res.json();
+            tbody.innerHTML = "";
+            rows.forEach((r) => {
+              const displayId =
+                r.user_code || r.nic || r.company_register_number || "";
+              const displayName = r.full_name || r.company_name || "";
+              const displayLocation = r.address || "";
+              const tr = document.createElement("tr");
+              tr.innerHTML = `<td>${escapeHtml(displayId)}</td><td>${escapeHtml(
+                displayName
+              )}</td><td>${escapeHtml(r.user_type)}</td><td>${escapeHtml(
+                displayLocation
+              )}</td>`;
+              tbody.appendChild(tr);
+            });
+          } catch (err) {
+            console.error("Failed loading users", err);
+          }
+        }
+
+        function openModal() {
+          lastFocused = document.activeElement;
+          modal.hidden = false;
+          modal.setAttribute("aria-hidden", "false");
+          // render fields for currently selected type (in case modal reused)
+          const currentType = form.querySelector('[name="userType"]')
+            ? form.querySelector('[name="userType"]').value
+            : "Farmer";
+          renderTypeFields(currentType);
+          // focus the first input/select inside the modal
+          const first =
+            modalContent && modalContent.querySelector("input, select");
+          first && first.focus();
+        }
+
+        function closeModal() {
+          modal.hidden = true;
+          modal.setAttribute("aria-hidden", "true");
+          form.reset();
+          lastFocused && lastFocused.focus();
+        }
+
+        addBtn && addBtn.addEventListener("click", openModal);
+        cancelBtn && cancelBtn.addEventListener("click", closeModal);
+
+        // Close modal when clicking overlay (outside modal-content)
+        modal &&
+          modal.addEventListener("click", function (e) {
+            if (e.target === modal) closeModal();
+          });
+
+        // Dynamic type-specific fields
+        const userTypeSelect = form && form.querySelector('[name="userType"]');
+        const typeFieldsContainer = document.getElementById("type-fields");
+
+        function renderTypeFields(type) {
+          if (!typeFieldsContainer) return;
+          let html = "";
+          if (type === "Farmer") {
+            html = `
+             
+              <label>NIC<input type="text" name="nic" /></label>
+              <label>Full Name<input type="text" name="fullName" /></label>
+              <label>Address<input type="text" name="address" /></label>
+              <label>District<input type="text" name="district" /></label>
+              <label>Contact Number<input type="text" name="contactNumber" /></label>
+              <label>Total Area Of Paddy Land<input type="text" name="totalAreaOfPaddyLand" /></label>
+            `;
+          } else if (type === "Collecter") {
+            html = `
+              <label>NIC<input type="text" name="nic" required /></label>
+              <label>Name<input type="text" name="fullName" /></label>
+              <label>Address<input type="text" name="address" /></label>
+              <label>District<input type="text" name="district" /></label>
+              <label>Contact Number<input type="text" name="contactNumber" /></label>
+            `;
+          } else if (type === "Miller") {
+            html = `
+              <label>Company Register Number<input type="text" name="companyRegisterNumber" required /></label>
+              <label>Company Name<input type="text" name="companyName" /></label>
+              <label>Address<input type="text" name="address" /></label>
+              <label>District<input type="text" name="district" /></label>
+              <label>Contact Number<input type="text" name="contactNumber" /></label>
+            `;
+          }
+          typeFieldsContainer.innerHTML = html;
+        }
+
+        userTypeSelect &&
+          userTypeSelect.addEventListener("change", function (e) {
+            const type = e.target.value;
+            renderTypeFields(type);
+          });
+        // initialize
+        const initialType = userTypeSelect ? userTypeSelect.value : "Farmer";
+        renderTypeFields(initialType);
+
+        form &&
+          form.addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const data = new FormData(form);
+            const userType = data.get("userType");
+
+            // gather type-specific ids/names/addresses when present
+            const nic = data.get("nic") ? data.get("nic").trim() : "";
+            const companyRegisterNumber = data.get("companyRegisterNumber")
+              ? data.get("companyRegisterNumber").trim()
+              : "";
+            const fullName = data.get("fullName")
+              ? data.get("fullName").trim()
+              : "";
+            const companyName = data.get("companyName")
+              ? data.get("companyName").trim()
+              : "";
+            const address = data.get("address")
+              ? data.get("address").trim()
+              : "";
+            const contactNumber = data.get("contactNumber")
+              ? data.get("contactNumber").trim()
+              : "";
+            const totalAreaOfPaddyLand = data.get("totalAreaOfPaddyLand")
+              ? data.get("totalAreaOfPaddyLand").trim()
+              : "";
+
+            // determine display values (no generic fields)
+            const displayId = nic || companyRegisterNumber;
+            const displayName = fullName || companyName;
+            const displayLocation = address;
+
+            if (!displayId || !displayName) {
+              alert("ID and Name are required for the selected user type");
+              return;
+            }
+
+            // build payload expected by server
+            const payload = {
+              userType,
+              nic,
+              companyRegisterNumber,
+              fullName,
+              companyName,
+              address,
+              district: data.get("district") || "",
+              contactNumber,
+              totalAreaOfPaddyLand,
+            };
+
+            try {
+              const res = await fetch("/api/users", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              });
+              if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || res.statusText);
+              }
+              const saved = await res.json();
+
+              // if server returned null/empty, fall back to locally computed values
+              let displayId2, displayName2, displayLocation2, savedUserType;
+              if (!saved || typeof saved !== "object") {
+                // use payload/local values as fallback
+                displayId2 =
+                  payload.user_code || nic || companyRegisterNumber || "";
+                displayName2 = fullName || companyName || "";
+                displayLocation2 = address || "";
+                savedUserType = userType;
+              } else {
+                displayId2 =
+                  saved.user_code ||
+                  saved.nic ||
+                  saved.company_register_number ||
+                  "";
+                displayName2 = saved.full_name || saved.company_name || "";
+                displayLocation2 = saved.address || "";
+                savedUserType = saved.user_type || userType;
+              }
+
+              const tr = document.createElement("tr");
+              tr.innerHTML = `<td>${escapeHtml(
+                displayId2
+              )}</td><td>${escapeHtml(displayName2)}</td><td>${escapeHtml(
+                savedUserType
+              )}</td><td>${escapeHtml(displayLocation2)}</td>`;
+              tbody.appendChild(tr);
+              closeModal();
+            } catch (err) {
+              console.error("Failed to save user", err);
+              alert("Failed to save user: " + (err.message || err));
+            }
+          });
+
+        // load users initially
+        loadUsers();
+
+        function escapeHtml(s) {
+          return String(s).replace(/[&<>\"]/g, function (m) {
+            return {
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+            }[m];
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
