@@ -1,0 +1,11 @@
+📝 Next Steps for Blockchain Integration:
+
+  When you're ready to connect to the actual smart contract:
+
+  1. Install Web3 libraries (ethers.js or web3.js)
+  2. Connect to Ethereum/Polygon network
+  3. Replace mock transaction creation with smart contract calls:
+    - createFarmerToCollectorTransaction()
+    - createCollectorToMillerTransaction()
+    - createMillerToWholeSalerTransaction()
+    - createWholeSalerToRetailerTransaction()

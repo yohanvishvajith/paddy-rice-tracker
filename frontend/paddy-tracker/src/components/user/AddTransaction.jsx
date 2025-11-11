@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { farmers, brokers, millers, wholesalers } from "../../data/mockData";
+import { collectors, millers, wholesalers, retailers } from "../../data/mockData";
 
 const AddTransaction = ({
   currentUser,
@@ -9,91 +9,75 @@ const AddTransaction = ({
   setCurrentView,
 }) => {
   const [formData, setFormData] = useState({
-    supplierId: "",
+    buyerId: "",
     productType: "",
     quantity: "",
-    supplierType: "farmer", // For miller: "farmer" or "broker"
+    pricePerKg: "",
   });
 
-  // Determine supplier list and labels based on user role
-  const getSupplierConfig = () => {
-    if (currentUser.role === "miller") {
-      // Miller can choose between farmer or broker
-      if (formData.supplierType === "broker") {
-        return {
-          list: brokers,
-          label: "Select Broker",
-          emptyText: "Select Broker",
-          notePrefix: "Purchased from broker",
-        };
-      }
+  // Determine buyer list, labels, and product types based on user role
+  const getBuyerConfig = () => {
+    if (currentUser.role === "farmer") {
       return {
-        list: farmers,
-        label: "Select Farmer",
-        emptyText: "Select Farmer",
-        notePrefix: "Purchased from farmer",
+        list: collectors,
+        label: "Select Collector",
+        emptyText: "Select Collector",
+        productLabel: "Paddy Type",
+        productTypes: ["Basmati", "Jasmine", "Long Grain", "Short Grain", "Other"],
+        isRice: false,
       };
-    } else if (currentUser.role === "broker") {
-      // Broker can choose between farmer or broker
-      if (formData.supplierType === "broker") {
-        return {
-          list: brokers,
-          label: "Select Broker",
-          emptyText: "Select Broker",
-          notePrefix: "Purchased from broker",
-        };
-      }
-      return {
-        list: farmers,
-        label: "Select Farmer",
-        emptyText: "Select Farmer",
-        notePrefix: "Purchased from farmer",
-      };
-    } else if (currentUser.role === "wholesaler") {
+    } else if (currentUser.role === "collector") {
       return {
         list: millers,
         label: "Select Miller",
         emptyText: "Select Miller",
-        notePrefix: "Purchased from miller",
+        productLabel: "Paddy Type",
+        productTypes: ["Basmati", "Jasmine", "Long Grain", "Short Grain", "Other"],
+        isRice: false,
       };
-    } else if (currentUser.role === "retailer") {
+    } else if (currentUser.role === "miller") {
       return {
         list: wholesalers,
         label: "Select Wholesaler",
         emptyText: "Select Wholesaler",
-        notePrefix: "Purchased from wholesaler",
+        productLabel: "Rice Type",
+        productTypes: ["White", "Brown", "Parboiled", "Organic", "Other"],
+        isRice: true,
+      };
+    } else if (currentUser.role === "wholesaler") {
+      return {
+        list: retailers,
+        label: "Select Retailer",
+        emptyText: "Select Retailer",
+        productLabel: "Rice Type",
+        productTypes: ["White", "Brown", "Parboiled", "Organic", "Other"],
+        isRice: true,
       };
     }
     return {
-      list: farmers,
-      label: "Select Supplier",
-      emptyText: "Select Supplier",
-      notePrefix: "Purchased from",
+      list: [],
+      label: "Select Buyer",
+      emptyText: "Select Buyer",
+      productLabel: "Product Type",
+      productTypes: [],
+      isRice: false,
     };
   };
 
-  const supplierConfig = getSupplierConfig();
-
-  const handleSupplierTypeChange = (type) => {
-    setFormData({
-      ...formData,
-      supplierType: type,
-      supplierId: "", // Reset supplier selection when type changes
-    });
-  };
+  const buyerConfig = getBuyerConfig();
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const selectedSupplier = supplierConfig.list.find(
-      (s) => s.id === formData.supplierId
+    const selectedBuyer = buyerConfig.list.find(
+      (b) => b.id === formData.buyerId
     );
 
     const newTransaction = {
       id: `TX${String(transactions.length + 1).padStart(3, "0")}`,
       batchId: `BATCH-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       product: formData.productType,
-      quantity: `${formData.quantity} kg`,
+      quantity: formData.quantity,
       stage:
         currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1),
       actor: currentUser.name,
@@ -110,121 +94,83 @@ const AddTransaction = ({
         .substr(2, 4)}`,
       verified: true,
       location: currentUser.location,
-      notes: `${supplierConfig.notePrefix}: ${selectedSupplier.name} (${selectedSupplier.id}) - ${selectedSupplier.location}`,
-      supplierName: selectedSupplier.name,
-      supplierId: selectedSupplier.id,
-      supplierLocation: selectedSupplier.location,
+      pricePerKg: formData.pricePerKg,
+      notes: `Sold to ${selectedBuyer.name} (${selectedBuyer.id}) at LKR ${formData.pricePerKg}/kg - ${selectedBuyer.location}`,
+      buyerName: selectedBuyer.name,
+      buyerId: selectedBuyer.id,
+      buyerLocation: selectedBuyer.location,
     };
 
     setTransactions([...transactions, newTransaction]);
     showNotif("Transaction added to blockchain successfully!");
 
     setFormData({
-      supplierId: "",
+      buyerId: "",
       productType: "",
       quantity: "",
-      supplierType: "farmer",
+      pricePerKg: "",
     });
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-6 md:py-8">
       <div className="max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
           Add New Transaction
         </h2>
-        <p className="text-gray-600 mb-8">
+        <p className="text-sm md:text-base text-gray-600 mb-6 md:mb-8">
           Record your supply chain activity on the blockchain
         </p>
 
-        <div className="bg-white rounded-xl card-shadow p-8">
+        <div className="bg-white rounded-xl card-shadow p-4 md:p-8">
           <form onSubmit={handleSubmit}>
-            {/* Supplier Type Selection (for Miller and Broker) */}
-            {(currentUser.role === "miller" ||
-              currentUser.role === "broker") && (
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Purchase From *
-                </label>
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => handleSupplierTypeChange("farmer")}
-                    className={`flex-1 px-6 py-3 rounded-lg font-semibold transition ${
-                      formData.supplierType === "farmer"
-                        ? "bg-purple-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    <i className="fas fa-seedling mr-2"></i>
-                    Farmer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSupplierTypeChange("broker")}
-                    className={`flex-1 px-6 py-3 rounded-lg font-semibold transition ${
-                      formData.supplierType === "broker"
-                        ? "bg-purple-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    <i className="fas fa-warehouse mr-2"></i>
-                    Broker
-                  </button>
-                </div>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {supplierConfig.label} *
+                  {buyerConfig.label} *
                 </label>
                 <select
-                  value={formData.supplierId}
+                  value={formData.buyerId}
                   onChange={(e) =>
-                    setFormData({ ...formData, supplierId: e.target.value })
+                    setFormData({ ...formData, buyerId: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm md:text-base"
                   required
                 >
-                  <option value="">{supplierConfig.emptyText}</option>
-                  {supplierConfig.list.map((supplier) => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.name} - {supplier.location} ({supplier.id})
+                  <option value="">{buyerConfig.emptyText}</option>
+                  {buyerConfig.list.map((buyer) => (
+                    <option key={buyer.id} value={buyer.id}>
+                      {buyer.name} - {buyer.location} ({buyer.id})
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Choose your supplier
+                  Select who you're selling to
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Product Type *
+                  {buyerConfig.productLabel} *
                 </label>
                 <select
                   value={formData.productType}
                   onChange={(e) =>
                     setFormData({ ...formData, productType: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm md:text-base"
                   required
                 >
-                  <option value="">Select Type</option>
-                  <option value="Samba Paddy">Samba Paddy</option>
-                  <option value="Samba Rice">Samba Rice</option>
-                  <option value="Nadu Paddy">Nadu Paddy</option>
-                  <option value="Nadu Rice">Nadu Rice</option>
-                  <option value="Keeri Samba Paddy">Keeri Samba Paddy</option>
-                  <option value="Keeri Samba Rice">Keeri Samba Rice</option>
-                  <option value="Red Paddy">Red Paddy</option>
-                  <option value="Red Rice">Red Rice</option>
+                  <option value="">Select {buyerConfig.productLabel}</option>
+                  {buyerConfig.productTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Quantity (kg) *
                 </label>
@@ -236,7 +182,26 @@ const AddTransaction = ({
                   }
                   placeholder="500"
                   min="1"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                  step="0.01"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm md:text-base"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Price per Kg (LKR) *
+                </label>
+                <input
+                  type="number"
+                  value={formData.pricePerKg}
+                  onChange={(e) =>
+                    setFormData({ ...formData, pricePerKg: e.target.value })
+                  }
+                  placeholder="150"
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm md:text-base"
                   required
                 />
               </div>
@@ -258,10 +223,10 @@ const AddTransaction = ({
               </div>
             </div>
 
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <button
                 type="submit"
-                className="flex-1 bg-purple-600 text-white py-4 rounded-lg font-semibold hover:bg-purple-700 transition"
+                className="flex-1 bg-purple-600 text-white py-3 md:py-4 rounded-lg font-semibold hover:bg-purple-700 transition text-sm md:text-base"
               >
                 <i className="fas fa-plus-circle mr-2"></i>
                 Submit to Blockchain
@@ -269,7 +234,7 @@ const AddTransaction = ({
               <button
                 type="button"
                 onClick={() => setCurrentView("my-transactions")}
-                className="px-8 bg-gray-200 text-gray-700 py-4 rounded-lg font-semibold hover:bg-gray-300 transition"
+                className="sm:px-8 bg-gray-200 text-gray-700 py-3 md:py-4 rounded-lg font-semibold hover:bg-gray-300 transition text-sm md:text-base"
               >
                 Cancel
               </button>

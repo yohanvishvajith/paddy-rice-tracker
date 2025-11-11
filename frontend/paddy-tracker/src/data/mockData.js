@@ -4,7 +4,7 @@ export const initialTransactions = [
     id: "TX001",
     batchId: "BATCH-2025-001",
     product: "Samba Paddy",
-    quantity: "500 kg",
+    quantity: "500",
     stage: "Farmer",
     actor: "Bandara Mudiyanselage",
     actorId: "FRM001",
@@ -13,12 +13,15 @@ export const initialTransactions = [
     verified: true,
     location: "Polonnaruwa",
     notes: "Organic farming, good weather conditions",
+    pricePerKg: "80",
+    collectorId: "COL001",
+    collectorName: "Central Collector Co.",
   },
   {
     id: "TX002",
     batchId: "BATCH-2025-001",
     product: "Samba Paddy",
-    quantity: "495 kg",
+    quantity: "495",
     stage: "Collector",
     actor: "Central Collector Co.",
     actorId: "COL001",
@@ -27,12 +30,13 @@ export const initialTransactions = [
     verified: true,
     location: "Kurunegala",
     notes: "Collected and transported in proper conditions",
+    pricePerKg: "85",
   },
   {
     id: "TX003",
     batchId: "BATCH-2025-001",
-    product: "Samba Rice",
-    quantity: "340 kg",
+    product: "White Rice",
+    quantity: "340",
     stage: "Miller",
     actor: "Modern Rice Mill Ltd.",
     actorId: "MIL001",
@@ -41,6 +45,9 @@ export const initialTransactions = [
     verified: true,
     location: "Colombo",
     notes: "Milled to premium quality, 68.7% yield",
+    pricePerKg: "150",
+    wholeSalerId: "WHL001",
+    wholeSalerName: "National Distributors",
   },
 ];
 
@@ -51,6 +58,30 @@ export const mockUsers = {
     name: "System Administrator",
     id: "ADM001",
     location: "Colombo",
+  },
+  farmer1: {
+    role: "farmer",
+    name: "Bandara Mudiyanselage",
+    id: "FRM001",
+    location: "Polonnaruwa",
+  },
+  farmer2: {
+    role: "farmer",
+    name: "Sunil Perera",
+    id: "FRM002",
+    location: "Anuradhapura",
+  },
+  collector1: {
+    role: "collector",
+    name: "Central Collector Co.",
+    id: "COL001",
+    location: "Kurunegala",
+  },
+  collector2: {
+    role: "collector",
+    name: "Eastern Transport & Collectors",
+    id: "COL002",
+    location: "Batticaloa",
   },
   miller1: {
     role: "miller",
@@ -96,7 +127,31 @@ export const mockUsers = {
   },
 };
 
-// Farmers list for selection (for Miller)
+// Collectors list for selection (for Farmer)
+export const collectors = [
+  {
+    id: "COL001",
+    name: "Central Collector Co.",
+    location: "Kurunegala",
+  },
+  {
+    id: "COL002",
+    name: "Eastern Transport & Collectors",
+    location: "Batticaloa",
+  },
+  {
+    id: "COL003",
+    name: "Southern Logistics",
+    location: "Galle",
+  },
+  {
+    id: "COL004",
+    name: "Northern Carriers",
+    location: "Jaffna",
+  },
+];
+
+// Farmers list for selection
 export const farmers = [
   {
     id: "FRM001",
@@ -120,31 +175,8 @@ export const farmers = [
   },
 ];
 
-// Brokers list for selection (for Wholesaler)
-export const brokers = [
-  {
-    id: "BRK001",
-    name: "Lanka Wholesale Traders",
-    location: "Colombo",
-  },
-  {
-    id: "BRK002",
-    name: "Premium Rice Brokers",
-    location: "Kandy",
-  },
-  {
-    id: "BRK003",
-    name: "Ceylon Rice Trading",
-    location: "Galle",
-  },
-  {
-    id: "BRK004",
-    name: "Island Grain Merchants",
-    location: "Negombo",
-  },
-];
 
-// Millers list for selection (for Broker)
+// Millers list for selection (for Collector)
 export const millers = [
   {
     id: "MIL001",
@@ -168,7 +200,7 @@ export const millers = [
   },
 ];
 
-// Wholesalers list for selection (for Retailer)
+// Wholesalers list for selection (for Miller)
 export const wholesalers = [
   {
     id: "WHL001",
@@ -189,6 +221,30 @@ export const wholesalers = [
     id: "WHL004",
     name: "Island Rice Supply",
     location: "Negombo",
+  },
+];
+
+// Retailers list for selection (for Wholesaler)
+export const retailers = [
+  {
+    id: "RET001",
+    name: "City Super Market",
+    location: "Colombo",
+  },
+  {
+    id: "RET002",
+    name: "Village Store",
+    location: "Matara",
+  },
+  {
+    id: "RET003",
+    name: "Metro Grocery",
+    location: "Kandy",
+  },
+  {
+    id: "RET004",
+    name: "Fresh Market",
+    location: "Galle",
   },
 ];
 
@@ -214,7 +270,7 @@ export const allUsers = {
   },
   COL002: {
     role: "collector",
-    name: "Eastern Transport",
+    name: "Eastern Transport & Collectors",
     id: "COL002",
     location: "Batticaloa",
   },

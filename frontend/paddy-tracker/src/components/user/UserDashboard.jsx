@@ -22,27 +22,27 @@ const UserDashboard = ({
       {/* Navigation */}
       <nav className="bg-white shadow-md border-b">
         <div className="container mx-auto px-4">
-          <div className="flex space-x-1">
+          <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setCurrentView("add-transaction")}
-              className={`px-6 py-4 font-medium transition ${
+              className={`px-4 md:px-6 py-3 md:py-4 font-medium transition whitespace-nowrap text-sm md:text-base ${
                 currentView === "add-transaction"
                   ? "border-b-4 border-purple-600 text-purple-600"
                   : "text-gray-600 hover:text-purple-600"
               }`}
             >
-              <i className="fas fa-plus-circle mr-2"></i>
+              <i className="fas fa-plus-circle mr-1 md:mr-2"></i>
               Add Transaction
             </button>
             <button
               onClick={() => setCurrentView("my-transactions")}
-              className={`px-6 py-4 font-medium transition ${
+              className={`px-4 md:px-6 py-3 md:py-4 font-medium transition whitespace-nowrap text-sm md:text-base ${
                 currentView === "my-transactions"
                   ? "border-b-4 border-purple-600 text-purple-600"
                   : "text-gray-600 hover:text-purple-600"
               }`}
             >
-              <i className="fas fa-list mr-2"></i>
+              <i className="fas fa-list mr-1 md:mr-2"></i>
               My Transactions
             </button>
           </div>

@@ -34,10 +34,12 @@ function AppContent() {
     // Navigate to appropriate dashboard
     if (user.role === "admin") {
       navigate("/admin");
+    } else if (user.role === "farmer") {
+      navigate("/farmer");
+    } else if (user.role === "collector") {
+      navigate("/collector");
     } else if (user.role === "miller") {
       navigate("/miller");
-    } else if (user.role === "broker") {
-      navigate("/broker");
     } else if (user.role === "wholesaler") {
       navigate("/wholesaler");
     } else if (user.role === "retailer") {
@@ -78,9 +80,9 @@ function AppContent() {
         />
 
         <Route
-          path="/miller"
+          path="/farmer"
           element={
-            currentUser?.role === "miller" ? (
+            currentUser?.role === "farmer" ? (
               <UserDashboard
                 currentUser={currentUser}
                 transactions={transactions}
@@ -95,9 +97,26 @@ function AppContent() {
         />
 
         <Route
-          path="/broker"
+          path="/collector"
           element={
-            currentUser?.role === "broker" ? (
+            currentUser?.role === "collector" ? (
+              <UserDashboard
+                currentUser={currentUser}
+                transactions={transactions}
+                setTransactions={setTransactions}
+                onLogout={handleLogout}
+                showNotif={showNotif}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        <Route
+          path="/miller"
+          element={
+            currentUser?.role === "miller" ? (
               <UserDashboard
                 currentUser={currentUser}
                 transactions={transactions}

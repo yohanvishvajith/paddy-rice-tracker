@@ -21,71 +21,71 @@ const AdminDashboardView = ({ transactions, setCurrentView }) => {
   ).length;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">
+    <div className="container mx-auto px-4 py-6 md:py-8">
+      <div className="mb-6 md:mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
           Admin Dashboard
         </h2>
-        <p className="text-gray-600">System overview and management</p>
+        <p className="text-sm md:text-base text-gray-600">System overview and management</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl card-shadow">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+        <div className="bg-white p-4 md:p-6 rounded-xl card-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm mb-1">Total Users</p>
-              <p className="text-3xl font-bold text-gray-800">{userCount}</p>
+              <p className="text-gray-500 text-xs md:text-sm mb-1">Total Users</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-800">{userCount}</p>
             </div>
-            <div className="bg-purple-100 p-4 rounded-lg">
-              <i className="fas fa-users text-purple-600 text-2xl"></i>
+            <div className="bg-purple-100 p-3 md:p-4 rounded-lg">
+              <i className="fas fa-users text-purple-600 text-xl md:text-2xl"></i>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl card-shadow">
+        <div className="bg-white p-4 md:p-6 rounded-xl card-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm mb-1">Total Transactions</p>
-              <p className="text-3xl font-bold text-gray-800">
+              <p className="text-gray-500 text-xs md:text-sm mb-1">Total Transactions</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-800">
                 {transactions.length}
               </p>
             </div>
-            <div className="bg-blue-100 p-4 rounded-lg">
-              <i className="fas fa-exchange-alt text-blue-600 text-2xl"></i>
+            <div className="bg-blue-100 p-3 md:p-4 rounded-lg">
+              <i className="fas fa-exchange-alt text-blue-600 text-xl md:text-2xl"></i>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl card-shadow">
+        <div className="bg-white p-4 md:p-6 rounded-xl card-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm mb-1">Unique Batches</p>
-              <p className="text-3xl font-bold text-gray-800">
+              <p className="text-gray-500 text-xs md:text-sm mb-1">Unique Batches</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-800">
                 {[...new Set(transactions.map((tx) => tx.batchId))].length}
               </p>
             </div>
-            <div className="bg-green-100 p-4 rounded-lg">
-              <i className="fas fa-boxes text-green-600 text-2xl"></i>
+            <div className="bg-green-100 p-3 md:p-4 rounded-lg">
+              <i className="fas fa-boxes text-green-600 text-xl md:text-2xl"></i>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl card-shadow">
+        <div className="bg-white p-4 md:p-6 rounded-xl card-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm mb-1">Verification Rate</p>
-              <p className="text-3xl font-bold text-gray-800">100%</p>
+              <p className="text-gray-500 text-xs md:text-sm mb-1">Verification Rate</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-800">100%</p>
             </div>
-            <div className="bg-green-100 p-4 rounded-lg">
-              <i className="fas fa-shield-alt text-green-600 text-2xl"></i>
+            <div className="bg-green-100 p-3 md:p-4 rounded-lg">
+              <i className="fas fa-shield-alt text-green-600 text-xl md:text-2xl"></i>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-xl card-shadow p-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+        <div className="bg-white rounded-xl card-shadow p-4 md:p-6">
+          <h3 className="text-base md:text-lg font-bold text-gray-800 mb-4">
             User Distribution by Role
           </h3>
           <div className="space-y-4">
@@ -141,8 +141,8 @@ const AdminDashboardView = ({ transactions, setCurrentView }) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl card-shadow p-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">
+        <div className="bg-white rounded-xl card-shadow p-4 md:p-6">
+          <h3 className="text-base md:text-lg font-bold text-gray-800 mb-4">
             Recent System Activity
           </h3>
           <div className="space-y-3">
@@ -182,36 +182,36 @@ const AdminDashboardView = ({ transactions, setCurrentView }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <button
           onClick={() => setCurrentView("manage-users")}
-          className="bg-white p-6 rounded-xl card-shadow hover:shadow-lg transition text-left"
+          className="bg-white p-4 md:p-6 rounded-xl card-shadow hover:shadow-lg transition text-left"
         >
-          <i className="fas fa-users-cog text-purple-600 text-3xl mb-3"></i>
-          <h4 className="font-bold text-gray-800 mb-2">Manage Users</h4>
-          <p className="text-sm text-gray-600">
+          <i className="fas fa-users-cog text-purple-600 text-2xl md:text-3xl mb-3"></i>
+          <h4 className="font-bold text-gray-800 mb-2 text-sm md:text-base">Manage Users</h4>
+          <p className="text-xs md:text-sm text-gray-600">
             Add, edit, or remove user accounts
           </p>
         </button>
 
         <button
           onClick={() => setCurrentView("all-transactions")}
-          className="bg-white p-6 rounded-xl card-shadow hover:shadow-lg transition text-left"
+          className="bg-white p-4 md:p-6 rounded-xl card-shadow hover:shadow-lg transition text-left"
         >
-          <i className="fas fa-database text-blue-600 text-3xl mb-3"></i>
-          <h4 className="font-bold text-gray-800 mb-2">
+          <i className="fas fa-database text-blue-600 text-2xl md:text-3xl mb-3"></i>
+          <h4 className="font-bold text-gray-800 mb-2 text-sm md:text-base">
             View All Transactions
           </h4>
-          <p className="text-sm text-gray-600">Complete transaction history</p>
+          <p className="text-xs md:text-sm text-gray-600">Complete transaction history</p>
         </button>
 
         <button
           onClick={() => setCurrentView("analytics")}
-          className="bg-white p-6 rounded-xl card-shadow hover:shadow-lg transition text-left"
+          className="bg-white p-4 md:p-6 rounded-xl card-shadow hover:shadow-lg transition text-left"
         >
-          <i className="fas fa-chart-bar text-green-600 text-3xl mb-3"></i>
-          <h4 className="font-bold text-gray-800 mb-2">Analytics & Reports</h4>
-          <p className="text-sm text-gray-600">Detailed system insights</p>
+          <i className="fas fa-chart-bar text-green-600 text-2xl md:text-3xl mb-3"></i>
+          <h4 className="font-bold text-gray-800 mb-2 text-sm md:text-base">Analytics & Reports</h4>
+          <p className="text-xs md:text-sm text-gray-600">Detailed system insights</p>
         </button>
       </div>
     </div>
