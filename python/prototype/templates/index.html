@@ -118,6 +118,7 @@
                   <option selected>Farmer</option>
                   <option>Collecter</option>
                   <option>Miller</option>
+                  <option>PMB</option>
                 </select>
               </label>
               <div id="type-fields">
@@ -335,12 +336,19 @@
               <label>District<input type="text" name="district" /></label>
               <label>Contact Number<input type="text" name="contactNumber" /></label>
             `;
+          } else if (type === "PMB") {
+            html = `
+              <label>Full Name<input type="text" name="fullName" required /></label>
+              <label>Address<input type="text" name="address" /></label>
+              <label>District<input type="text" name="district" /></label>
+              <label>Contact Number<input type="text" name="contactNumber" /></label>
+            `;
           }
           typeFieldsContainer.innerHTML = html;
-          // Show or hide paddy stock section: farmers should not have initial stock input
+          // Show or hide paddy stock section: farmers and PMB should not have initial stock input
           const paddySection = document.getElementById("paddy-section");
           if (paddySection) {
-            if (type === "Farmer") {
+            if (type === "Farmer" || type === "PMB") {
               paddySection.style.display = "none";
               // clear any existing paddy rows
               const list = document.getElementById("paddy-list");
@@ -407,13 +415,26 @@
               : "";
 
             // determine display values (no generic fields)
-            const displayId = nic || companyRegisterNumber;
-            const displayName = fullName || companyName;
+            let displayId = nic || companyRegisterNumber;
+            let displayName = fullName || companyName;
             const displayLocation = address;
 
-            if (!displayId || !displayName) {
-              alert("ID and Name are required for the selected user type");
-              return;
+            // For PMB, the backend uses a fixed id ('PMB') so only a name is required
+            if (
+              userType &&
+              userType.toString().trim().toLowerCase() === "pmb"
+            ) {
+              displayId = "PMB";
+              displayName = fullName || "";
+              if (!displayName) {
+                alert("Name is required for PMB");
+                return;
+              }
+            } else {
+              if (!displayId || !displayName) {
+                alert("ID and Name are required for the selected user type");
+                return;
+              }
             }
 
             // build payload expected by server
