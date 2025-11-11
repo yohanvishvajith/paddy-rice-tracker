@@ -45,10 +45,10 @@
           <label
             >Role
             <select name="role">
-             
               <option>Collecter</option>
               <option>Miller</option>
               <option>Admin</option>
+              <option>PMB</option>
             </select>
           </label>
 
@@ -113,6 +113,8 @@
                 const returnedRole = (j.role || "").toLowerCase();
                 if (returnedRole.startsWith("miller")) {
                   window.location.href = "/miller";
+                } else if (returnedRole.startsWith("pmb")) {
+                  window.location.href = "/pmb";
                 } else if (
                   returnedRole.startsWith("collecter") ||
                   returnedRole.startsWith("collector")

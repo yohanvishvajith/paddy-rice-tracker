@@ -124,6 +124,16 @@
                 <!-- fields rendered by JS -->
               </div>
 
+              <div id="paddy-section">
+                <label>Paddy stock</label>
+                <div class="paddy-controls">
+                  <button type="button" id="add-paddy-btn" class="btn">
+                    Add Paddy
+                  </button>
+                </div>
+                <div id="paddy-list"></div>
+              </div>
+
               <div class="modal-actions">
                 <button type="button" id="cancel-btn" class="btn">
                   Cancel
@@ -209,6 +219,51 @@
           }
         }
 
+        // Paddy types handling
+        let __paddyTypes = [];
+        async function fetchPaddyTypes() {
+          try {
+            const res = await fetch("/api/paddy_types");
+            if (!res.ok) return [];
+            const data = await res.json();
+            return Array.isArray(data) ? data : [];
+          } catch (e) {
+            return [];
+          }
+        }
+
+        function createPaddyRow(types) {
+          const wrap = document.createElement("div");
+          wrap.className = "paddy-row";
+          const sel = document.createElement("select");
+          sel.name = "paddyType";
+          const ph = document.createElement("option");
+          ph.value = "";
+          ph.textContent = "Select paddy type";
+          sel.appendChild(ph);
+          types.forEach((t) => {
+            const o = document.createElement("option");
+            o.value = t.name || t.id || "";
+            o.textContent = t.name || String(t.id || "");
+            sel.appendChild(o);
+          });
+          const qty = document.createElement("input");
+          qty.type = "number";
+          qty.name = "paddyQty";
+          qty.min = "0";
+          qty.step = "0.01";
+          qty.placeholder = "Quantity (kg)";
+          const rem = document.createElement("button");
+          rem.type = "button";
+          rem.className = "btn";
+          rem.textContent = "Remove";
+          rem.addEventListener("click", () => wrap.remove());
+          wrap.appendChild(sel);
+          wrap.appendChild(qty);
+          wrap.appendChild(rem);
+          return wrap;
+        }
+
         function openModal() {
           lastFocused = document.activeElement;
           modal.hidden = false;
@@ -218,6 +273,13 @@
             ? form.querySelector('[name="userType"]').value
             : "Farmer";
           renderTypeFields(currentType);
+          // load paddy types for the add-paddy UI
+          (async () => {
+            __paddyTypes = await fetchPaddyTypes();
+            // clear any existing rows
+            const list = document.getElementById("paddy-list");
+            if (list) list.innerHTML = "";
+          })();
           // focus the first input/select inside the modal
           const first =
             modalContent && modalContent.querySelector("input, select");
@@ -275,6 +337,18 @@
             `;
           }
           typeFieldsContainer.innerHTML = html;
+          // Show or hide paddy stock section: farmers should not have initial stock input
+          const paddySection = document.getElementById("paddy-section");
+          if (paddySection) {
+            if (type === "Farmer") {
+              paddySection.style.display = "none";
+              // clear any existing paddy rows
+              const list = document.getElementById("paddy-list");
+              if (list) list.innerHTML = "";
+            } else {
+              paddySection.style.display = "";
+            }
+          }
         }
 
         userTypeSelect &&
@@ -285,6 +359,25 @@
         // initialize
         const initialType = userTypeSelect ? userTypeSelect.value : "Farmer";
         renderTypeFields(initialType);
+
+        // wire Add Paddy button
+        const addPaddyBtn = document.getElementById("add-paddy-btn");
+        if (addPaddyBtn) {
+          addPaddyBtn.addEventListener("click", async function () {
+            try {
+              if (!__paddyTypes || !__paddyTypes.length) {
+                __paddyTypes = await fetchPaddyTypes();
+              }
+              const list = document.getElementById("paddy-list");
+              if (list) {
+                const row = createPaddyRow(__paddyTypes);
+                list.appendChild(row);
+              }
+            } catch (e) {
+              console.error("Could not add paddy row", e);
+            }
+          });
+        }
 
         form &&
           form.addEventListener("submit", async function (e) {
@@ -336,6 +429,27 @@
               totalAreaOfPaddyLand,
             };
 
+            // collect paddy stock rows if any
+            try {
+              const pList = [];
+              const container = document.getElementById("paddy-list");
+              if (container) {
+                const rows = container.querySelectorAll(".paddy-row");
+                rows.forEach((r) => {
+                  const sel = r.querySelector('select[name="paddyType"]');
+                  const q = r.querySelector('input[name="paddyQty"]');
+                  const pval = sel ? sel.value : "";
+                  const qtyval = q ? q.value : "";
+                  if (pval && qtyval) {
+                    pList.push({ paddyType: pval, quantity: qtyval });
+                  }
+                });
+              }
+              if (pList.length) payload.stock = pList;
+            } catch (err) {
+              // ignore
+            }
+
             try {
               const res = await fetch("/api/users", {
                 method: "POST",
@@ -376,6 +490,9 @@
               )}</td><td>${escapeHtml(displayLocation2)}</td>`;
               tbody.appendChild(tr);
               closeModal();
+              // clear paddy rows after successful save
+              const pListEl = document.getElementById("paddy-list");
+              if (pListEl) pListEl.innerHTML = "";
             } catch (err) {
               console.error("Failed to save user", err);
               alert("Failed to save user: " + (err.message || err));

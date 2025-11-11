@@ -45,7 +45,7 @@ def init_db():
         cursor = conn.cursor()
         create_table = '''
         CREATE TABLE IF NOT EXISTS users (
-            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            id varchar(255) PRIMARY KEY,
             user_type VARCHAR(50) NOT NULL,
             nic VARCHAR(64),
             full_name VARCHAR(255),
@@ -106,6 +106,24 @@ def init_db():
         finally:
             cursor.close()
             conn.close()
+        # Create paddy_type table to store available paddy types
+        conn = get_connection(MYSQL_DATABASE)
+        cursor = conn.cursor()
+        create_paddy = '''
+        CREATE TABLE IF NOT EXISTS `paddy_type` (
+            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        '''
+        try:
+            cursor.execute(create_paddy)
+        except mysql.connector.Error as e:
+            print('Could not create paddy_type table:', e)
+        finally:
+            cursor.close()
+            conn.close()
+
         print('Database initialized (database/table ensured).')
     except mysql.connector.Error as err:
         print('Failed initializing database:', err)
@@ -136,6 +154,13 @@ def api_login():
         session['user_type'] = 'Admin'
         session['full_name'] = 'Administrator'
         return jsonify({'ok': True, 'role': 'Admin'})
+
+    # quick PMB (government) shortcut
+    if username.lower() == 'pmb' and password == '123456' and role.lower() == 'pmb':
+        session['user_id'] = 'pmb'
+        session['user_type'] = 'PMB'
+        session['full_name'] = 'Government (PMB)'
+        return jsonify({'ok': True, 'role': 'PMB'})
 
     # treat username as a string identifier (no numeric validation)
     try:
@@ -179,6 +204,11 @@ def collecter_page():
 @app.route('/miller')
 def miller_page():
     return render_template('miller.html')
+
+
+@app.route('/pmb')
+def pmb_page():
+    return render_template('pmb.html')
 
 
 @app.route('/api/me', methods=['GET'])
@@ -332,14 +362,118 @@ def api_add_transaction():
 
     try:
         conn = get_connection(MYSQL_DATABASE)
+        # perform insert + stock update atomically
+        try:
+            conn.start_transaction()
+        except Exception:
+            # some connectors use begin; ignore if not available
+            pass
         cur = conn.cursor()
-        insert_sql = 'INSERT INTO `transaction` (`from`, `to`, `type`, quantity, `datetime`) VALUES (%s, %s, %s, %s, %s)'
-        cur.execute(insert_sql, (str(from_val), str(to_val), ttype, qty, dt))
-        last_id = cur.lastrowid
+        # Determine sender type
+        sender_type = None
+        try:
+            cur.execute('SELECT user_type FROM users WHERE id = %s LIMIT 1', (str(from_val),))
+            urow = cur.fetchone()
+            sender_type = urow[0] if urow else None
+        except Exception:
+            sender_type = None
+
+        # If sender is not a Farmer, ensure they have sufficient stock before proceeding
+        try:
+            if not (isinstance(sender_type, str) and sender_type.strip().lower().startswith('farmer')):
+                # lock sender stock row for update
+                sel_s_sql = 'SELECT id, amount FROM `stock` WHERE user_id = %s AND `type` = %s FOR UPDATE'
+                cur.execute(sel_s_sql, (str(from_val), ttype))
+                srow = cur.fetchone()
+                if not srow:
+                    # no stock row -> insufficient
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    cur.close()
+                    conn.close()
+                    return jsonify({'ok': False, 'error': 'Insufficient stock: sender has no stock for this paddy type'}), 400
+                s_stock_id, s_current = srow[0], srow[1] if srow[1] is not None else 0
+                if float(s_current) < float(qty):
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    cur.close()
+                    conn.close()
+                    return jsonify({'ok': False, 'error': 'Insufficient stock: sender balance is lower than requested quantity'}), 400
+                # deduct now (will be committed later)
+                s_new = float(s_current) - float(qty)
+                upd_s_sql = 'UPDATE `stock` SET amount = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s'
+                cur.execute(upd_s_sql, (s_new, s_stock_id))
+
+        except mysql.connector.Error as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Failed checking/deducting sender stock: ' + str(e)}), 500
+
+        # Update recipient stock: if a row exists for (to_val, ttype) increment amount, else insert
+        try:
+            sel_sql = 'SELECT id, amount FROM `stock` WHERE user_id = %s AND `type` = %s FOR UPDATE'
+            cur.execute(sel_sql, (str(to_val), ttype))
+            row = cur.fetchone()
+            if row:
+                stock_id, current_amount = row[0], row[1] if row[1] is not None else 0
+                new_amount = float(current_amount) + float(qty)
+                upd_sql = 'UPDATE `stock` SET amount = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s'
+                cur.execute(upd_sql, (new_amount, stock_id))
+            else:
+                ins_sql = 'INSERT INTO `stock` (user_id, `type`, amount) VALUES (%s, %s, %s)'
+                cur.execute(ins_sql, (str(to_val), ttype, qty))
+        except mysql.connector.Error as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Failed updating recipient stock: ' + str(e)}), 500
+
+        # Now insert the transaction record (after stock updates)
+        try:
+            insert_sql = 'INSERT INTO `transaction` (`from`, `to`, `type`, quantity, `datetime`) VALUES (%s, %s, %s, %s, %s)'
+            cur.execute(insert_sql, (str(from_val), str(to_val), ttype, qty, dt))
+            last_id = cur.lastrowid
+        except mysql.connector.Error as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Failed inserting transaction: ' + str(e)}), 500
+        except mysql.connector.Error as e:
+            # if stock update fails, rollback the transaction and return error
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Failed updating stock: ' + str(e)}), 500
+
+        # commit both transaction insert and stock update
         try:
             conn.commit()
         except Exception:
-            pass
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Failed to commit transaction'}), 500
+
         cur.close()
         conn.close()
         return jsonify({'ok': True, 'id': last_id}), 201
@@ -361,6 +495,21 @@ def api_get_transactions():
         else:
             sql = 'SELECT id, `from`, `to`, `type`, quantity, `datetime`, created_at FROM `transaction` ORDER BY id DESC LIMIT 200'
             cur.execute(sql)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return jsonify(rows)
+    except mysql.connector.Error as err:
+        return jsonify({'error': str(err)}), 500
+
+
+@app.route('/api/paddy_types', methods=['GET'])
+def api_get_paddy_types():
+    """Return list of paddy types from paddy_type table."""
+    try:
+        conn = get_connection(MYSQL_DATABASE)
+        cur = conn.cursor(dictionary=True)
+        cur.execute('SELECT id, name FROM paddy_type ORDER BY id')
         rows = cur.fetchall()
         cur.close()
         conn.close()
@@ -419,6 +568,49 @@ def api_add_user():
         }
 
         cursor.close()
+
+        # If the client provided initial stock (paddy types + quantities), insert them
+        # Use the application id we attempted to insert (variable `id`) if present,
+        # otherwise fall back to the numeric last_id returned by the connector.
+        created_user_id = id or last_id
+        try:
+            stock_items = payload.get('stock') if isinstance(payload, dict) else None
+        except Exception:
+            stock_items = None
+        # Do not insert initial stock for Farmers
+        is_farmer = False
+        try:
+            is_farmer = isinstance(user_type, str) and user_type.strip().lower().startswith('farmer')
+        except Exception:
+            is_farmer = False
+
+        if stock_items and created_user_id and not is_farmer:
+            try:
+                s_cur = conn.cursor()
+                for si in stock_items:
+                    # accept either {paddyType, quantity} or {type, quantity}
+                    ptype = si.get('paddyType') if isinstance(si, dict) else None
+                    if not ptype:
+                        ptype = si.get('type') if isinstance(si, dict) else None
+                    qty = None
+                    try:
+                        qty = float(si.get('quantity')) if isinstance(si, dict) and si.get('quantity') is not None else None
+                    except Exception:
+                        qty = None
+                    if ptype and qty is not None:
+                        try:
+                            s_cur.execute('INSERT INTO `stock` (user_id, `type`, amount) VALUES (%s, %s, %s)', (str(created_user_id), ptype, qty))
+                        except Exception as _:
+                            # ignore individual stock insert failures but continue
+                            pass
+                try:
+                    conn.commit()
+                except Exception:
+                    pass
+                s_cur.close()
+            except Exception:
+                # ignore stock insertion errors to avoid blocking user creation
+                pass
 
         # return the inserted row with a computed user_code
         rc = conn.cursor(dictionary=True)

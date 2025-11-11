@@ -93,9 +93,9 @@
     </main>
 
     <script>
-  // Miller purchases UI (server-backed). Fetches /api/users and /api/transactions.
-  let users = [];
-  let purchases = [];
+      // Miller purchases UI (server-backed). Fetches /api/users and /api/transactions.
+      let users = [];
+      let purchases = [];
       let currentUser = null;
 
       function qs(sel) {
@@ -140,6 +140,19 @@
         );
       }
 
+      // Fetch paddy types from server
+      async function fetchPaddyTypes() {
+        try {
+          const res = await fetch("/api/paddy_types");
+          if (!res.ok) throw new Error("Failed to load paddy types");
+          const data = await res.json();
+          return Array.isArray(data) ? data : [];
+        } catch (e) {
+          console.error("Could not fetch paddy types:", e);
+          return [];
+        }
+      }
+
       async function populateSourceSelect(fromType) {
         const sel = qs("#sourceSelect");
         sel.innerHTML = "";
@@ -180,22 +193,24 @@
       async function loadServerTransactions() {
         if (!currentUser) return;
         try {
-          const res = await fetch(`/api/transactions?to=${encodeURIComponent(currentUser.user_id)}`);
-          if (!res.ok) throw new Error('Failed to load transactions');
+          const res = await fetch(
+            `/api/transactions?to=${encodeURIComponent(currentUser.user_id)}`
+          );
+          if (!res.ok) throw new Error("Failed to load transactions");
           const rows = await res.json();
           // map server rows to UI records
-          purchases = rows.map(r => ({
-            id: 'srv-' + r.id,
+          purchases = rows.map((r) => ({
+            id: "srv-" + r.id,
             when: r.datetime || r.created_at,
-            fromType: '',
-            sourceId: r['from'],
-            sourceName: String(r['from']),
-            paddyType: r.type || '',
+            fromType: "",
+            sourceId: r["from"],
+            sourceName: String(r["from"]),
+            paddyType: r.type || "",
             qty: Number(r.quantity) || 0,
-            tx_id: r.id
+            tx_id: r.id,
           }));
         } catch (e) {
-          console.error('Could not load server transactions', e);
+          console.error("Could not load server transactions", e);
           purchases = [];
         }
       }
@@ -270,6 +285,20 @@
         }
         const fromSel = qs("#purchaseFromType");
         await populateSourceSelect(fromSel.value);
+        // populate paddy types
+        const types = await fetchPaddyTypes();
+        const pSel = qs("#paddyType");
+        pSel.innerHTML = "";
+        const ph = document.createElement("option");
+        ph.value = "";
+        ph.textContent = "Select paddy type";
+        pSel.appendChild(ph);
+        types.forEach((t) => {
+          const o = document.createElement("option");
+          o.value = t.name || t.id || "";
+          o.textContent = t.name || String(t.id || "");
+          pSel.appendChild(o);
+        });
         await loadServerTransactions();
         renderTables();
         fromSel.addEventListener("change", (e) =>
